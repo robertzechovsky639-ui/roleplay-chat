@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="cs"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎭</text></svg>"><title>Roleplay Chat</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div id="app">
+<aside id="sidebar">
+ <div class="side-head"><h1>🎭 Roleplay</h1><button id="closeSide" class="icon mobile">✕</button></div>
+ <button id="newChar" class="primary">+ Nová postava</button>
+ <ul id="charList"></ul>
+ <div class="side-foot">
+  <button id="exportBtn">⬇ Export</button>
+  <label class="btn">⬆ Import<input type="file" id="importFile" accept=".json" hidden></label>
+  <button id="settingsBtn">⚙ Nastavení</button>
+ </div>
+</aside>
+<main id="main">
+ <header id="chatHead">
+  <button id="openSide" class="icon mobile">☰</button>
+  <div id="chatTitle" class="title">Vyber nebo vytvoř postavu</div>
+  <span id="memState" class="hint"></span><div class="actions">
+   <button id="storyBtn" class="icon" title="Příběh (Story builder)">📜</button>
+   <button id="memBtn" class="icon" title="Paměť a lorebook">🧠</button>
+   <button id="editChar" class="icon" title="Upravit">✎</button>
+   <button id="regen" class="icon" title="Přegenerovat poslední odpověď">↻</button>
+   <button id="clearChat" class="icon" title="Vymazat chat">🗑</button>
+  </div>
+ </header>
+ <div id="progress" hidden><div class="pbar"><div id="progressBar"></div></div><div id="progressText" class="hint"></div></div>
+ <div id="messages"><div class="empty">Vytvoř si postavu a začni konverzaci. Nejdřív nastav API v ⚙ Nastavení.</div></div>
+ <form id="composer">
+  <textarea id="input" rows="1" placeholder="Napiš zprávu… (Enter = odeslat, Shift+Enter = nový řádek)"></textarea>
+  <button id="sendBtn" class="primary" type="submit">Odeslat</button>
+ </form>
+</main>
+</div>
+
+<dialog id="charDlg"><form method="dialog" id="charForm">
+ <h2 id="charDlgTitle">Postava</h2>
+ <label>Jméno<input name="name" required></label>
+ <label>Avatar (emoji nebo URL obrázku)<input name="avatar" placeholder="🧙 nebo https://…"></label>
+ <label>Popis / osobnost<textarea name="description" rows="4"></textarea></label>
+ <label>Scénář<textarea name="scenario" rows="3"></textarea></label>
+ <label>Úvodní zpráva<textarea name="greeting" rows="3"></textarea></label>
+ <div class="row"><button type="button" id="delChar" class="danger">Smazat</button><span class="sp"></span>
+ <button value="cancel" formnovalidate>Zrušit</button><button value="ok" class="primary">Uložit</button></div>
+</form></dialog>
+
+<dialog id="setDlg"><form method="dialog" id="setForm">
+ <h2>Nastavení AI</h2>
+ <label>Poskytovatel<select name="provider">
+  <option value="free">Zdarma online (Pollinations, bez klíče)</option>
+  <option value="webllm">Lokálně v prohlížeči (WebLLM, WebGPU, bez klíče)</option>
+  <option value="custom">Vlastní API (OpenAI kompatibilní, s klíčem)</option></select></label>
+ <div data-prov="free"><label>Model<select name="freeModel"><option value="openai">openai (výchozí)</option></select></label>
+  <p class="hint">Bezplatné veřejné API text.pollinations.ai – bez registrace, ale může být pomalé (10–30 s), mít limity či výpadky. Neotevírej aplikaci přes „localhost“ (API ho blokuje), použij 127.0.0.1.</p></div>
+ <div data-prov="webllm"><label>Lokální model<select name="webllmModel">
+  <option value="Qwen2.5-7B-Instruct-q4f16_1-MLC">Qwen2.5 7B Instruct (~5 GB, nejlepší čeština)</option>
+  <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Qwen2.5 3B Instruct (~2.5 GB)</option>
+  <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen2.5 1.5B Instruct (~1.6 GB, rychlý)</option>
+  <option value="Llama-3.1-8B-Instruct-q4f16_1-MLC">Llama 3.1 8B Instruct (~5 GB)</option>
+  <option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Llama 3.2 3B Instruct (~2.3 GB)</option>
+  <option value="gemma-2-9b-it-q4f16_1-MLC">Gemma 2 9B (~6 GB)</option>
+  <option value="gemma-2-2b-it-q4f16_1-MLC">Gemma 2 2B (~1.9 GB)</option>
+  <option value="Phi-3.5-mini-instruct-q4f16_1-MLC">Phi 3.5 mini (~2.5 GB)</option></select></label>
+  <p class="hint" id="gpuNote"></p><p class="hint">Model se stáhne jednou a uloží do cache prohlížeče. Běží plně offline na tvé grafice.</p></div>
+ <div data-prov="custom">
+ <label>Base URL (OpenAI kompatibilní)<input name="baseUrl" placeholder="https://api.openai.com/v1"></label>
+ <label>Model<input name="model" placeholder="gpt-4o-mini"></label>
+ <label>API klíč<input name="apiKey" type="password" autocomplete="off"></label></div>
+ <label>Teplota<input name="temperature" type="number" step="0.1" min="0" max="2"></label>
+ <label>Paměť (automatické shrnování dlouhých chatů)<select name="memoryOn"><option value="1">Zapnuto</option><option value="0">Vypnuto</option></select></label>
+ <label>Tvoje jméno (uživatel)<input name="userName" placeholder="Uživatel"></label>
+ <p class="hint">Nastavení i případný klíč se ukládají pouze do localStorage tohoto prohlížeče. Údaje se ukládají pouze do localStorage tohoto prohlížeče.</p>
+ <div class="row"><span class="sp"></span><button value="cancel" formnovalidate>Zrušit</button><button value="ok" class="primary">Uložit</button></div>
+</form></dialog>
+<dialog id="storyDlg" class="wide"><form method="dialog" id="storyForm">
+ <h2>📜 Story builder</h2><p class="hint">Vše se vkládá do instrukcí modelu pro tuto postavu. Můžeš použít {{char}} a {{user}}.</p>
+ <button type="button" id="aiStory" class="primary">✨ Navrhni příběh pomocí AI</button>
+ <div class="grid2"><label>Svět / prostředí<textarea name="world" rows="3"></textarea></label>
+<label>Žánr a tón<textarea name="genre" rows="2"></textarea></label>
+<label>Zápletka / cíl příběhu<textarea name="plot" rows="3"></textarea></label>
+<label>Vedlejší postavy<textarea name="side" rows="3"></textarea></label>
+<label>Lore a pravidla světa<textarea name="lore" rows="3"></textarea></label>
+<label>Aktuální situace<textarea name="situation" rows="2"></textarea></label>
+<label>Persona uživatele (kdo jsem já)<textarea name="persona" rows="2"></textarea></label>
+</div>
+ <div class="row"><span class="sp"></span><button value="cancel" formnovalidate>Zrušit</button><button value="ok" class="primary">Uložit</button></div>
+</form></dialog>
+<dialog id="memDlg" class="wide"><div>
+ <h2>🧠 Paměť a Lorebook</h2>
+ <form id="memCfg" class="cfg" onsubmit="return false">
+  <label>Zpráv na shrnutí<input name="chunk" type="number" min="2"></label>
+  <label>Ponechat doslovně<input name="keep" type="number" min="1"></label>
+  <label>Sloučit po (ks)<input name="merge" type="number" min="2"></label>
+  <label>Max. slov shrnutí<input name="words" type="number" min="30"></label>
+ </form>
+ <div class="row"><button id="memRun" type="button">▶ Zpracovat nyní</button><button id="memReset" type="button" class="danger">Vymazat paměť</button></div>
+ <div id="memBody"></div>
+ <form method="dialog" class="row"><span class="sp"></span><button class="primary">Zavřít</button></form>
+</div></dialog>
+<script src="app.js"></script>
+</body></html>
